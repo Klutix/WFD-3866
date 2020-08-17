@@ -1,0 +1,82 @@
+<!--
+  ~ Levels Beyond CONFIDENTIAL
+  ~
+  ~ Copyright 2003 - 2020 Levels Beyond Incorporated
+  ~ All Rights Reserved.
+  ~
+  ~ NOTICE:  All information contained herein is, and remains
+  ~ the property of Levels Beyond Incorporated and its suppliers,
+  ~ if any.  The intellectual and technical concepts contained
+  ~ herein are proprietary to Levels Beyond Incorporated
+  ~ and its suppliers and may be covered by U.S. and Foreign Patents,
+  ~ patents in process, and are protected by trade secret or copyright law.
+  ~ Dissemination of this information or reproduction of this material
+  ~ is unlawful and strictly forbidden unless prior written permission is obtained
+  ~ from Levels Beyond Incorporated.
+  -->
+<workflow xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xmlns="http://levelsbeyond.com/schema/workflow"
+          xmlns:nimbus="http://levelsbeyond.com/schema/workflow/nimbus"
+          xsi:schemaLocation="http://levelsbeyond.com/schema/latest http://levelsbeyond.com/schema/latest/studio.xsd"
+          id="PlayingAround"
+          name="PlayingAround"
+          executionLabelExpression="Playing Around"
+          subjectDOClassName=""
+          showInUserInterface="true"
+          sdkVersion="">
+
+    <initialStepName>get workflow name</initialStepName>
+
+    <!-- generate api key copied from nfl day 4 guide -->
+<!--    <submitHttpStep name="generate api key"-->
+<!--                    executionLabelExpression="generate API key for ${username}">-->
+<!--        urlExpression="${remoteReachUrl}/reachengine/api/v1/apikey/${username}"-->
+<!--        requestMethodExpression="POST"-->
+<!--        responsePayloadDataDef="apiKeyResponse"-->
+<!--        continueOnException="true"-->
+<!--        devStep="true">-->
+
+<!--        <transition condition="${apiKeyResponse.get('apiKey') != null}">-->
+<!--            <targetStepName>set api key</targetStepName>-->
+<!--        </transition>-->
+<!--        <transition condition="${true}">-->
+<!--            <targetStepName>end</targetStepName>-->
+<!--        </transition>-->
+<!--        <requestHeader name="apikey">${workflowAPIKey}</requestHeader>-->
+<!--    </submitHttpStep>-->
+
+
+    <emailStep  name="send e-mail"
+                    emailAddressesExpression="=T(java.util.Arrays).asList('gwohlford@levelsbeyond.com', 'gabrielwohlford@gmail.com')"
+                    subjectExpression="Reach Engine workflow example">
+        <body>
+            <![CDATA[
+                bah
+            ]]>
+        </body>
+    </emailStep>
+
+    <!-- tinker area -->
+    <noopStep name="get workflow name" executionLabelExpression="${#this.workflow.executionLabel}" nextStep="end"/>
+
+
+
+    <!-- ................................................... End Steps .................................................... -->
+    <!-- success -->
+    <noopStep name="end"/>
+    <contextDataDef name="fileToIngest" dataType="File"				/>
+    <contextDataDef name="FileName"     dataType="String"                       defaultDataExpression="${#filename(fileToIngest)}"/>
+    <contextDataDef name="fileJson"     dataType="JSON" defaultDataExpression="${#convertToJSON('yes,yes')}"/>
+
+
+
+
+
+    <!-- ................................................... Data Defs .................................................... -->
+    <!-- ............ INPUT ............. -->
+
+
+    <!-- ......... PROCESSING ........... -->
+
+
+</workflow>
