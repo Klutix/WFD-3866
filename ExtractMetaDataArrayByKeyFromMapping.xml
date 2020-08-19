@@ -18,12 +18,13 @@
           xmlns="http://levelsbeyond.com/schema/workflow"
           xmlns:nimbus="http://levelsbeyond.com/schema/workflow/nimbus"
           xsi:schemaLocation="http://levelsbeyond.com/schema/latest http://levelsbeyond.com/schema/latest/studio.xsd"
-          id="ExtractMetaDataArrayByFileNameFromMapping"
-          name="ExtractMetaDataArrayByFileNameFromMapping"
-          executionLabelExpression="ExtractMetaDataArrayByFileNameFromMapping | "
+          id="ExtractMetaDataArrayByKeyFromMapping"
+          name="ExtractMetaDataArrayByKeyFromMapping"
+          executionLabelExpression="ExtractMetaDataArrayByKeyFromMapping | "
+          resultDataDef="arrMetadataValues"
           subjectDOClassName=""
           showInUserInterface="false"
-          sdkVersion=""
+          sdkVersion="arrMetadataValues"
 >
 
     <initialStepName>extract metadata array</initialStepName>
@@ -36,10 +37,10 @@
                 import groovy.json.JsonSlurper
 
                 def jsonSlurper = new JsonSlurper()
-                def object = jsonSlurper.parseText(json.toString())
+                def object = jsonSlurper.parseText(jsonMap.toString())
                 def result = []
 
-                object[fileName].each{k, v ->
+                object[key].each{k, v ->
                     result.add(v)
                 }
                 return  result
@@ -52,7 +53,7 @@
     <!-- success -->
     <noopStep name="end"/>
     <!-- REQUIRED INPUTS -->
-    <contextDataDef name="fileName"          dataType="String" required="true"/>
+    <contextDataDef name="key"               dataType="String" required="true"/>
     <contextDataDef name="jsonMap"           dataType="JSON"   required="true"/>
     <!--groovy out/workflowOut-->
     <contextDataDef name="arrMetadataValues" dataType="String" multiple="true"/>

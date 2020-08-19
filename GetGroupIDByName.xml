@@ -15,31 +15,58 @@
   ~ from Levels Beyond Incorporated.
   -->
 <workflow xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xmlns="http://levelsbeyond.com/schema/workflow"
-	xmlns:nimbus="http://levelsbeyond.com/schema/workflow/nimbus"
-	xsi:schemaLocation="http://levelsbeyond.com/schema/latest http://levelsbeyond.com/schema/latest/studio.xsd"
-	id="GetGroupIDByName"
-	name="GetGroupIDByName"
-	executionLabelExpression="GetGroupIDByName | "
-	subjectDOClassName=""
-	showInUserInterface="true"
-	sdkVersion=""
-	>
+          xmlns="http://levelsbeyond.com/schema/workflow"
+          xmlns:nimbus="http://levelsbeyond.com/schema/workflow/nimbus"
+          xsi:schemaLocation="http://levelsbeyond.com/schema/latest http://levelsbeyond.com/schema/latest/studio.xsd"
+          id="GetGroupIDByName"
+          name="GetGroupIDByName"
+          executionLabelExpression="GetGroupIDByName | "
+          subjectDOClassName=""
+          showInUserInterface="true"
+          sdkVersion="">
 
-	<initialStepName>end</initialStepName>
-    
-    
+
+    <initialStepName>select group by name</initialStepName>
+
+    <queryStep name="select group by name"
+               targetDataObjectClass="MetadataPropertySet"
+               resultDataDef="selectedAssets"
+               executionLabelExpression="found ${selectedAssets.size()}"
+               nextStep="end">
+        <criteria>
+            <![CDATA[
+                <criteria>
+                   <and>
+                      <condition property="name" op="notnull"/>
+                   </and>
+                </criteria>
+            ]]>
+        </criteria>
+    </queryStep>
+
+
     <!-- ................................................... End Steps .................................................... -->
-	<!-- success -->
-	<noopStep name="end"/>
+    <!-- success -->
+    <noopStep name="end"/>
 
-	
-	<!-- ................................................... Data Defs .................................................... -->
-	<!-- ............ INPUT ............. -->
+    <contextDataDef name="groupName"     dataType="String"      userInput="true"/>
+    <contextDataDef name="reachUrl"         dataType="String"   defaultDataExpression="${#sysconfig('reachengine.url')}"/>
+    <contextDataDef name="checkIfExist"     dataType="Boolean"  defaultDataExpression="true"/>
+    <!--___________________________________________________________________________________ -->
 
-	
-	<!-- ......... PROCESSING ........... -->
+    <contextDataDef name="selectedAssets"   dataType="Data Object" multiple="true"/>
+    <contextDataDef name="responseCode"     dataType="Integer"/>
+    <contextDataDef name="jsonPayload"      dataType="JSON"/>
+    <contextDataDef name="result"           dataType="Boolean"/>
+    <contextDataDef name="user"             dataType="String" defaultDataExpression="system"/>
+    <contextDataDef name="password"         dataType="String" defaultDataExpression="password"/>
 
-  
-    
+
+    <!-- ................................................... Data Defs .................................................... -->
+    <!-- ............ INPUT ............. -->
+
+
+    <!-- ......... PROCESSING ........... -->
+
+
 </workflow>

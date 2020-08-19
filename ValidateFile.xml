@@ -15,31 +15,62 @@
   ~ from Levels Beyond Incorporated.
   -->
 <workflow xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xmlns="http://levelsbeyond.com/schema/workflow"
-	xmlns:nimbus="http://levelsbeyond.com/schema/workflow/nimbus"
-	xsi:schemaLocation="http://levelsbeyond.com/schema/latest http://levelsbeyond.com/schema/latest/studio.xsd"
-	id="ValidateFile"
-	name="ValidateFile"
-	executionLabelExpression="ValidateFile | "
-	subjectDOClassName=""
-	showInUserInterface="false"
-	sdkVersion=""
-	>
+          xmlns="http://levelsbeyond.com/schema/workflow"
+          xmlns:nimbus="http://levelsbeyond.com/schema/workflow/nimbus"
+          xsi:schemaLocation="http://levelsbeyond.com/schema/latest http://levelsbeyond.com/schema/latest/studio.xsd"
+          id="ValidateFile"
+          name="ValidateFile"
+          executionLabelExpression="ValidateFile | "
+          subjectDOClassName=""
+          showInUserInterface="false"
+          sdkVersion=""
+>
 
-	<initialStepName>end</initialStepName>
-    
-    
+    <initialStepName>end</initialStepName>
+
+    !-- extract metadata from file name-->
+    <executeSubflowStep name="extract recordOID from metadata"
+                        targetWorkflowId="ExtractRecordIDFromJson"
+                        resultDataDef="recordOID"
+                        nextStep="check if file exist by id">
+        <subflowContextDataMapping parentDataDef="jsonMap" subflowDataDef="jsonMetadata"/>
+    </executeSubflowStep>
+
+    <queryStep name="check if file exist by id"
+               targetDataObjectClass="AssetMaster"
+               resultDataDef="queryAssetResult"
+               executionLabelExpression="found ${queryAssetResult.size() == 0}">
+        <criteria>
+            <![CDATA[
+                <criteria>
+                    <and>
+                        <condition property="metadata.recordOID" op="eq">
+                            <test value="${recordOID}" />
+                        </condition>
+                    </and>
+                </criteria>
+            ]]>
+        </criteria>
+
+        <transition condition="${queryAssetResult.size() == 0}">
+            <targetStepName>ingest asset</targetStepName>
+        </transition>
+        <transition condition="${true}">
+            <targetStepName>end</targetStepName> <!-- needs to be added to result email -->
+        </transition>
+    </queryStep>
+
+
     <!-- ................................................... End Steps .................................................... -->
-	<!-- success -->
-	<noopStep name="end"/>
+    <!-- success -->
+    <noopStep name="end"/>
 
-	
-	<!-- ................................................... Data Defs .................................................... -->
-	<!-- ............ INPUT ............. -->
 
-	
-	<!-- ......... PROCESSING ........... -->
+    <!-- ................................................... Data Defs .................................................... -->
+    <!-- ............ INPUT ............. -->
 
-  
-    
+
+    <!-- ......... PROCESSING ........... -->
+
+
 </workflow>

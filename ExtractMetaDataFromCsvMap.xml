@@ -44,7 +44,7 @@
     
     <groovyStep name="extract json using file name"
                 resultDataDef="resultJson"
-                executionLabelExpression="Extracting JSON from ${fileName}"
+                executionLabelExpression="Extracting JSON using ${fileName}"
                 nextStep="end">
         <script>
             <![CDATA[
@@ -55,7 +55,7 @@
                     def jsonSlurper = new JsonSlurper()
                     def object = jsonSlurper.parseText(jsonMap.toString())
 
-                    return object[fileName]?:'{}'
+                    return object[fileName]!=null ? object[fileName] : [:]
             ]]>
         </script>
 

@@ -20,14 +20,14 @@
           xsi:schemaLocation="http://levelsbeyond.com/schema/latest http://levelsbeyond.com/schema/latest/studio.xsd"
           id="custom_AnyAssetIngest"
           name="custom_AnyAssetIngest"
-          executionLabelExpression="customAnyAssetIngest | "
+          executionLabelExpression="customAnyAssetIngest | ${fileToIngest.name} "
           subjectDOClassName=""
           resultDataDef="assetMaster"
           showInUserInterface="true"
           sdkVersion=""
 >
 
-<initialStepName>ingest asset</initialStepName>
+    <initialStepName>extract associated metadata from map</initialStepName>
 
 
     <queryStep name="check if workflow is running"
@@ -67,6 +67,46 @@
         </criteria>
     </queryStep>
 
+    <!-- Extract JSON for Specified File -->
+    <executeSubflowStep name="extract associated metadata from map"
+                        targetWorkflowId="ExtractMetaDataFromCsvMap"
+                        executionLabelExpression="Extracting metadata for ${fileToIngest.name}"
+                        resultDataDef="jsonMetadata">
+        <subflowContextDataMapping parentDataDef="assetName" subflowDataDef="fileName"/>
+        <subflowContextDataMapping parentDataDef="jsonMap" subflowDataDef="jsonMap"/>
+
+        <transition condition="${jsonMetadata.size() == 0 }">
+            <targetStepName>end</targetStepName>
+        </transition>
+        <transition condition="${true}">
+            <targetStepName>check for duplicates</targetStepName>
+        </transition>
+
+    </executeSubflowStep>
+
+    <queryStep name="check for duplicates"
+               targetDataObjectClass="AssetMaster"
+               resultDataDef="duplicateResults"
+               executionLabelExpression="checking if ${fileToIngest} has duplicate ID ${jsonMetadata.recordOID}">
+        <transition condition="${duplicateResults.size() == 0 and jsonMetadata.recordOID != null }">
+            <targetStepName>ingest asset</targetStepName>
+        </transition>
+        <transition condition="${true}">
+            <targetStepName>end</targetStepName>
+        </transition>
+        <criteria>
+            <![CDATA[
+                 <criteria>
+                    <and>
+                        <condition property="metadata.recordOID" op="eq">
+                            <test value="${jsonMetadata.recordOID}" />
+                        </condition>
+                    </and>
+                </criteria>
+            ]]>
+        </criteria>
+    </queryStep>
+
 
     <executeSubflowStep name="ingest asset"
                         targetWorkflowId="${ingestSubflow}"
@@ -75,7 +115,7 @@
                         resultDataDef="assetMaster"
                         executionLabelExpression="ingesting ${fileToIngest.absolutePath}"
                         pctComplete="25"
-                        nextStep="extract associated metadata from map"
+                        nextStep="extract category name from metadata"
     >
         <subflowContextDataMapping parentDataDef="assetVersion"             subflowDataDef="assetVersion"/>
         <subflowContextDataMapping parentDataDef="assetName"                subflowDataDef="assetName"/>
@@ -86,14 +126,7 @@
     </executeSubflowStep>
 
 
-   <!-- Extract JSON for Specified File -->
-     <executeSubflowStep name="extract associated metadata from map"
-                         targetWorkflowId="ExtractMetaDataFromCsvMap"
-                         resultDataDef="jsonMetadata"
-                         nextStep="extract category name from metadata">
-         <subflowContextDataMapping parentDataDef="assetName" subflowDataDef="fileName"/>
-         <subflowContextDataMapping parentDataDef="jsonMap" subflowDataDef="jsonMap"/>
-     </executeSubflowStep>
+
 
     <!-- Extract category name from metadata -->
     <executeSubflowStep name="extract category name from metadata"
@@ -119,18 +152,18 @@
         <subflowContextDataMapping parentDataDef="collectionName" subflowDataDef="collectionName"/>
     </executeSubflowStep>
 
-<!--    &lt;!&ndash;add category to asset &ndash;&gt;-->
-<!--    <executeSubflowStep name="add category to asset" targetWorkflowId="createCategoryAddToAsset"-->
-<!--                        subjectChangePath="${assetMaster}"-->
-<!--                        nextStep="set metadata">-->
-<!--        <subflowContextDataMapping parentDataDef="categoryName" subflowDataDef="categoryName"/>-->
-<!--    </executeSubflowStep>-->
+    <!--    &lt;!&ndash;add category to asset &ndash;&gt;-->
+    <!--    <executeSubflowStep name="add category to asset" targetWorkflowId="createCategoryAddToAsset"-->
+    <!--                        subjectChangePath="${assetMaster}"-->
+    <!--                        nextStep="set metadata">-->
+    <!--        <subflowContextDataMapping parentDataDef="categoryName" subflowDataDef="categoryName"/>-->
+    <!--    </executeSubflowStep>-->
 
 
     <nimbus:changeMetaCategoryStep
             name="add category to asset"
             targetObjectExpression="${assetMaster}"
-            nextStep="set metadat">
+            nextStep="set metadata">
         <nimbus:addCategory>${categoryName}</nimbus:addCategory>
     </nimbus:changeMetaCategoryStep>
 
@@ -158,7 +191,7 @@
         <subflowContextDataMapping parentDataDef="appendToFile" subflowDataDef="appendToFile"/>
         <subflowContextDataMapping parentDataDef="issueDescription" subflowDataDef="messageToWrite"/>
     </executeSubflowStep>
-   <!-- ################################## end testing ################################# -->
+    <!-- ################################## end testing ################################# -->
 
 
     <executeSubflowStep name="set metadata"
@@ -180,7 +213,7 @@
 
 
     <executeSubflowStep name="create proxies"
-                        targetWorkflowId="${proxiesSubflow}"
+                        targetWorkflowId="custom_createProxiesAnyAsset"
                         subjectChangePath="${assetMaster}"
                         waitForCompletionExpression="${!asyncProxies}"
                         executionLabelExpression="Creating proxies ${asyncProxies? 'asynchronous' : 'synchronous'}"
@@ -329,14 +362,16 @@
 
     <!--Here lies the custom variables -->
     <contextDataDef name="jsonMap"                  dataType="JSON"/>
-    <contextDataDef name="assetName"                dataType="String" defaultDataExpression="${#filename(fileToIngest)}"/>
+    <contextDataDef name="assetName"                dataType="String" defaultDataExpression="${fileToIngest.name}"/>
     <contextDataDef name="collectionName"           dataType="String"/>
     <contextDataDef name="categoryName"             dataType="String"/>
     <contextDataDef name="issueDescription"         dataType="String"/>
 
     <!--add to results param -->
-    <contextDataDef name="appendToFile"     dataType="Boolean"  defaultDataExpression="true"/>
-    <contextDataDef name="issueExist"        dataType="Boolean"/>
+    <contextDataDef name="appendToFile"             dataType="Boolean"  defaultDataExpression="true"/>
+    <contextDataDef name="issueExist"               dataType="Boolean"/>
+
+    <contextDataDef name="duplicateResults"         dataType="Data Object" multiple="true"/>
 
 
 

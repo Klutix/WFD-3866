@@ -19,13 +19,33 @@
           xmlns:nimbus="http://levelsbeyond.com/schema/workflow/nimbus"
           xsi:schemaLocation="http://levelsbeyond.com/schema/latest http://levelsbeyond.com/schema/latest/studio.xsd"
           id="PlayingAround"
-          name="PlayingAround"
+          name="Playing Around"
           executionLabelExpression="Playing Around"
-          subjectDOClassName=""
+          subjectDOClassName="AssetMaster"
           showInUserInterface="true"
           sdkVersion="">
 
-    <initialStepName>get workflow name</initialStepName>
+    <initialStepName>check for duplicates</initialStepName>
+
+
+    <queryStep name="check for duplicates"
+               targetDataObjectClass="AssetMaster"
+               resultDataDef="duplicateResults"
+               executionLabelExpression="test ${json.uuid} found ${duplicateResults.size()}"
+               nextStep="end">
+
+        <criteria>
+            <![CDATA[
+                 <criteria>
+                    <and>
+                        <condition property="metadata.recordOID" op="eq">
+                            <test value="102235" />
+                        </condition>
+                    </and>
+                </criteria>
+            ]]>
+        </criteria>
+    </queryStep>
 
     <!-- generate api key copied from nfl day 4 guide -->
 <!--    <submitHttpStep name="generate api key"-->
@@ -57,7 +77,27 @@
     </emailStep>
 
     <!-- tinker area -->
-    <noopStep name="get workflow name" executionLabelExpression="${#this.workflow.executionLabel}" nextStep="end"/>
+<!--    <noopStep name="get workflow name" executionLabelExpression="${#this.workflow.executionLabel}" nextStep="end"/>-->
+
+    <groovyStep name="testJsonToArray" resultDataDef="testStringArray" nextStep="end">
+        <script>
+           <![CDATA[
+            import groovy.*
+            import groovy.json.*
+            import groovy.json.JsonSlurper
+
+            def jsonSlurper = new JsonSlurper()
+            def object = jsonSlurper.parseText(json.toString())
+            def result = []
+
+            object.each{k, v ->
+                result.add(v)
+            }
+            return  result
+            ]]>
+
+        </script>
+    </groovyStep>
 
 
 
@@ -66,7 +106,28 @@
     <noopStep name="end"/>
     <contextDataDef name="fileToIngest" dataType="File"				/>
     <contextDataDef name="FileName"     dataType="String"                       defaultDataExpression="${#filename(fileToIngest)}"/>
-    <contextDataDef name="fileJson"     dataType="JSON" defaultDataExpression="${#convertToJSON('yes,yes')}"/>
+    <contextDataDef name="json"         dataType="JSON">
+        <defaultDataExpression>
+            {
+            "uuid":"recordOID",
+            "wid":"weekID",
+            "location":"eventLocation",
+            "description":"longDescription",
+            "short":"shortDescription",
+            "keywords":"keywords",
+            "validated":"preValidated",
+            "project":"collection",
+            "department":"category"
+            }
+        </defaultDataExpression>
+    </contextDataDef>
+
+
+    <contextDataDef name="testStringArray"    dataType="String" multiple="true"/>
+    <contextDataDef name="testNameValue"      dataType="NameValuePair" multiple="true"/>
+    <contextDataDef name="duplicateResults"   dataType="Data Object" multiple="true"/>
+    <nimbus:setMetadataValueStep name="testset" targetExpression="${subject}" propertyNameExpression="proxyTriage" valueExpression="${true}" nextStep="end"/>
+
 
 
 
