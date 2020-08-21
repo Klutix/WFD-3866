@@ -20,27 +20,28 @@
           xsi:schemaLocation="http://levelsbeyond.com/schema/latest http://levelsbeyond.com/schema/latest/studio.xsd"
           id="custom_AnyAssetIngest"
           name="custom_AnyAssetIngest"
-          executionLabelExpression="customAnyAssetIngest | ${fileToIngest.name} "
+          executionLabelExpression="customAnyAssetIngest ${fileToIngest.name} | ${fileToIngest.absolutePath} "
           subjectDOClassName=""
           resultDataDef="assetMaster"
           showInUserInterface="true"
           sdkVersion=""
 >
 
-    <initialStepName>extract associated metadata from map</initialStepName>
-
+    <initialStepName>check if workflow is running</initialStepName>
 
     <queryStep name="check if workflow is running"
                targetDataObjectClass="WorkflowExecution"
                resultDataDef="currentExecutions"
                executionLabelExpression="Is a workflow running on this file already? ${currentExecutions.size() != 0}"
-               pctComplete="5">
+               pctComplete="5"
+    >
         <transition condition="${currentExecutions.size() == 0}">
-            <targetStepName>ingest asset</targetStepName>
+            <targetStepName>set asset name</targetStepName>
         </transition>
         <transition condition="true">
             <targetStepName>workflow is running</targetStepName>
         </transition>
+
         <criteria>
             <![CDATA[
                 <criteria>
@@ -67,22 +68,35 @@
         </criteria>
     </queryStep>
 
-    <!-- Extract JSON for Specified File -->
-    <executeSubflowStep name="extract associated metadata from map"
-                        targetWorkflowId="ExtractMetaDataFromCsvMap"
-                        executionLabelExpression="Extracting metadata for ${fileToIngest.name}"
-                        resultDataDef="jsonMetadata">
-        <subflowContextDataMapping parentDataDef="assetName" subflowDataDef="fileName"/>
-        <subflowContextDataMapping parentDataDef="jsonMap" subflowDataDef="jsonMap"/>
+    <setContextData name="set asset name" targetDataDef="assetName" valueExpression="${fileToIngest.name}" nextStep="extract associated metadata from map"/>
 
-        <transition condition="${jsonMetadata.size() == 0 }">
+    <!-- Extract JSON for Specified File -->
+<!--    <executeSubflowStep name="extract associated metadata from map"-->
+<!--                        targetWorkflowId="ExtractMetaDataFromCsvMap"-->
+<!--                        executionLabelExpression="Extracting metadata for ${fileToIngest.name}"-->
+<!--                        resultDataDef="jsonMetadata">-->
+<!--        <subflowContextDataMapping parentDataDef="assetName" subflowDataDef="fileName"/>-->
+<!--        <subflowContextDataMapping parentDataDef="jsonMap" subflowDataDef="jsonMap"/>-->
+
+<!--        <transition condition="${jsonMetadata.size() == 0 }">-->
+<!--            <targetStepName>end</targetStepName>-->
+<!--        </transition>-->
+<!--        <transition condition="${true}">-->
+<!--            <targetStepName>check for duplicates</targetStepName>-->
+<!--        </transition>-->
+
+<!--    </executeSubflowStep>-->
+
+    <setContextData name="extract associated metadata from map"
+                    targetDataDef="jsonMetadata"
+                    valueExpression="${jsonMap.get(assetName)}">
+        <transition condition="${jsonMetadata.size() == 0 }">-->
             <targetStepName>end</targetStepName>
         </transition>
         <transition condition="${true}">
             <targetStepName>check for duplicates</targetStepName>
         </transition>
-
-    </executeSubflowStep>
+    </setContextData>
 
     <queryStep name="check for duplicates"
                targetDataObjectClass="AssetMaster"
@@ -126,23 +140,32 @@
     </executeSubflowStep>
 
 
+    <setContextData name="extract category name from metadata"
+                    targetDataDef="categoryName"
+                    nextStep="extract collection name from metadata"
+                    valueExpression="${jsonMetadata.category == 'Null' ? jsonMetadata.category : 'No Department'}"/>
+
+    <setContextData name="extract collection name from metadata"
+                    targetDataDef="collectionName"
+                    nextStep="add collection to asset"
+                    valueExpression="${jsonMetadata.collection == 'Null' ? jsonMetadata.collection : 'orphaned'}"/>
 
 
-    <!-- Extract category name from metadata -->
-    <executeSubflowStep name="extract category name from metadata"
-                        targetWorkflowId="ExtractCatgeoryNameFromJson"
-                        resultDataDef="categoryName"
-                        nextStep="extract collection name from metadata">
-        <subflowContextDataMapping parentDataDef="jsonMetadata" subflowDataDef="jsonMetadata"/>
-    </executeSubflowStep>
+<!--    &lt;!&ndash; Extract category name from metadata &ndash;&gt;-->
+<!--    <executeSubflowStep name="extract category name from metadata"-->
+<!--                        targetWorkflowId="ExtractCatgeoryNameFromJson"-->
+<!--                        resultDataDef="categoryName"-->
+<!--                        nextStep="extract collection name from metadata">-->
+<!--        <subflowContextDataMapping parentDataDef="jsonMetadata" subflowDataDef="jsonMetadata"/>-->
+<!--    </executeSubflowStep>-->
 
-    <!-- Extract collection name from metadata -->
-    <executeSubflowStep name="extract collection name from metadata"
-                        targetWorkflowId="ExtractCollectionNameFromJson"
-                        resultDataDef="collectionName"
-                        nextStep="add collection to asset">
-        <subflowContextDataMapping parentDataDef="jsonMetadata" subflowDataDef="jsonMetadata"/>
-    </executeSubflowStep>
+<!--    &lt;!&ndash; Extract collection name from metadata &ndash;&gt;-->
+<!--    <executeSubflowStep name="extract collection name from metadata"-->
+<!--                        targetWorkflowId="ExtractCollectionNameFromJson"-->
+<!--                        resultDataDef="collectionName"-->
+<!--                        nextStep="add collection to asset">-->
+<!--        <subflowContextDataMapping parentDataDef="jsonMetadata" subflowDataDef="jsonMetadata"/>-->
+<!--    </executeSubflowStep>-->
 
 
     <!-- add collection to reach -->
@@ -167,40 +190,13 @@
         <nimbus:addCategory>${categoryName}</nimbus:addCategory>
     </nimbus:changeMetaCategoryStep>
 
-    <!-- ####################################testing##################################### -->
-    <noopStep name="check for orphaned or no department values">
-        <transition condition="${categoryName} == 'No Department' or ${collectionyName} == 'orphaned'">
-            <targetStepName>set issue message</targetStepName>
-        </transition>
-        <transition condition="${true}">
-            <targetStepName>set metadata</targetStepName>
-        </transition>
-    </noopStep>
-
-    <setContextData name="set issue message" executionLabelExpression="setting issue"
-                    valueExpression="(${categoryName} == 'No Department'?:${collectionyName}) + ${assetMaster.name}"
-                    targetDataDef="issueDescription"
-                    nextStep="set issue flag"/>
-
-    <setContextData name="set issue flag"
-                    valueExpression="${true}"
-                    targetDataDef="issueExist"
-                    nextStep="add to results"/>
-
-    <executeSubflowStep name="add to results" targetWorkflowId="createAddToResultsFile" nextStep="set metadata" continueOnException="true">\
-        <subflowContextDataMapping parentDataDef="appendToFile" subflowDataDef="appendToFile"/>
-        <subflowContextDataMapping parentDataDef="issueDescription" subflowDataDef="messageToWrite"/>
-    </executeSubflowStep>
-    <!-- ################################## end testing ################################# -->
-
-
     <executeSubflowStep name="set metadata"
                         targetWorkflowId="${metadataSubflow}"
                         subjectChangePath="${assetMaster}"
                         subflowTargetDataDef="asset"
                         executionLabelExpression="Add any collections, categories, and metadata"
                         pctComplete="50"
-                        nextStep="create proxies">
+                        nextStep="check for orphaned or no department values">
         <subflowContextDataMapping parentDataDef="failOnMetadataError"      subflowDataDef="failOnError"/>
         <subflowContextDataMapping parentDataDef="collections"              subflowDataDef="collections"/>
         <subflowContextDataMapping parentDataDef="metadataForm"             subflowDataDef="metadataForm"/>
@@ -209,6 +205,29 @@
         <subflowContextDataMapping parentDataDef="categoryNames"            subflowDataDef="categoryNames"/>
         <subflowContextDataMapping parentDataDef="jsonMetadata"             subflowDataDef="jsonMetadata"/>
         <subflowContextDataMapping parentDataDef="linkMetadata"             subflowDataDef="linkMetadata"/>
+    </executeSubflowStep>
+
+    <!-- ####################################testing##################################### -->
+    <noopStep name="check for orphaned or no department values">
+        <transition condition="${categoryName == 'No Department' or collectionName == 'Null'}">
+            <targetStepName>set issue message</targetStepName>
+        </transition>
+        <transition condition="${true}">
+            <targetStepName>end</targetStepName>
+        </transition>
+    </noopStep>
+
+    <setContextData name="set issue message" executionLabelExpression="setting issue"
+                    valueExpression="${assetName}..${categoryName == 'No Department' ? 'No Department' :'orphaned'} "
+                    targetDataDef="issueDescription"
+                    nextStep="add to results"/>
+
+
+    <executeSubflowStep name="add to results" targetWorkflowId="createAddToResultsFile"
+                        nextStep="create proxies"
+                        continueOnException="true">\
+        <subflowContextDataMapping parentDataDef="appendToFile"     subflowDataDef="appendToFile"/>
+        <subflowContextDataMapping parentDataDef="issueDescription" subflowDataDef="messageToWrite"/>
     </executeSubflowStep>
 
 
@@ -243,6 +262,9 @@
         <subflowContextDataMapping parentDataDef="documentProxyArguments"   subflowDataDef="documentProxyArguments"/>
         <subflowContextDataMapping parentDataDef="documentThumbArguments"   subflowDataDef="documentThumbArguments"/>
     </executeSubflowStep>
+
+
+    <!-- ################################## end testing ################################# -->
 
 
     <!-- ................................................... End Steps .................................................... -->
@@ -374,5 +396,6 @@
     <contextDataDef name="duplicateResults"         dataType="Data Object" multiple="true"/>
 
 
+    <contextDataDef name="currentExecutions" 	    dataType="Data Object" 	    multiple="true"/>
 
 </workflow>

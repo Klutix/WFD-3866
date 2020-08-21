@@ -29,59 +29,75 @@
     <!-- ________________________ 1) Parse CSV to MetaMap File_________________________________-->
     <executeSubflowStep name="parse csv and build jsonmap"          targetWorkflowId="csvToMetaMapWithKey"
                         resultDataDef="jsonKeyMap"
-                        nextStep="custom_DirectoryWithMetaData"
+                        nextStep="create results file"
                         executionLabelExpression="Parsing CSV and Building JSON Mapping">
             <subflowContextDataMapping parentDataDef="uniqueKey"    subflowDataDef="uniqueKey"/>
             <subflowContextDataMapping parentDataDef="jsonMap"      subflowDataDef="jsonMappingFile"/>
             <subflowContextDataMapping parentDataDef="csvFile"      subflowDataDef="csvFile"/>
     </executeSubflowStep>
 
-<!--    <executeSubflowStep name="any_assetIngest" targetWorkflowId="custom_AnyAssetIngest"-->
-<!--                        nextStep="end">-->
-<!--        <subflowContextDataMapping parentDataDef="fileToIngest" subflowDataDef="fileToIngest"/>-->
-<!--        <subflowContextDataMapping parentDataDef="jsonKeyMap"   subflowDataDef="jsonMap"/>-->
-<!--    </executeSubflowStep>-->
-
+    <executeSubflowStep name="create results file"
+                        targetWorkflowId="createAddToResultsFile"
+                        nextStep="custom_DirectoryWithMetaData" continueOnException="true">\
+        <subflowContextDataMapping parentDataDef="issueDescription" subflowDataDef="messageToWrite"/>
+    </executeSubflowStep>
 
     <executeSubflowStep name="custom_DirectoryWithMetaData"
                         targetWorkflowId="custom_IngestDirectoryWithMetaData"
-                        nextStep="end">
+                        nextStep="do issues exist">
         <subflowContextDataMapping parentDataDef="directoryToIngest" subflowDataDef="directoryToIngest"/>
-        <subflowContextDataMapping parentDataDef="createMezz"        subflowDataDef="createMezz"/>
-        <subflowContextDataMapping parentDataDef="createProxy"       subflowDataDef="createProxy"/>
-        <subflowContextDataMapping parentDataDef="createThumb"       subflowDataDef="createThumb"/>
-        <subflowContextDataMapping parentDataDef="createThumbVideo"  subflowDataDef="createThumbVideo"/>
+<!--        <subflowContextDataMapping parentDataDef="createMezz"        subflowDataDef="createMezz"/>-->
+<!--        <subflowContextDataMapping parentDataDef="createProxy"       subflowDataDef="createProxy"/>-->
+<!--        <subflowContextDataMapping parentDataDef="createThumb"       subflowDataDef="createThumb"/>-->
+<!--        <subflowContextDataMapping parentDataDef="createThumbVideo"  subflowDataDef="createThumbVideo"/>-->
         <subflowContextDataMapping parentDataDef="jsonKeyMap"        subflowDataDef="jsonMap"/>
     </executeSubflowStep>
 
     <!-- _______________________________testing_______________________ -->
     <!-- TODO: IF ANY ASSET FAILS EMAIL USER -->
-    <noopStep name="do issues exist">
+    <groovyStep name="do issues exist"
+                resultDataDef="issueExist">
         <transition condition="${issueExist}">
-            <targetStepName>get results from file</targetStepName>
+            <targetStepName>email user results</targetStepName>
         </transition>
         <transition condition="{true}">
             <targetStepName>end</targetStepName>
         </transition>
-    </noopStep>
 
-    <groovyStep name="get results from file"
-                resultDataDef="fileResults"
-                nextStep="email user results">
         <script>
             <![CDATA[
-                return new File('/reachengine/media/tmpResults.txt').text
+                def fileData = new File(resultsURL).text
+                if(fileData.equals(issueDescription))
+                    return false
+                return true
             ]]>
         </script>
     </groovyStep>
 
 
+<!--    <noopStep name="do issues exist">-->
+<!--        <transition condition="${issueExist}">-->
+<!--            <targetStepName>email user results</targetStepName>-->
+<!--        </transition>-->
+<!--        <transition condition="{true}">-->
+<!--            <targetStepName>end</targetStepName>-->
+<!--        </transition>-->
+<!--    </noopStep>-->
+
+    <delayStep name="wait a moment"
+               nextStep="email user results"
+               delaySecondsExpression="10"
+               executionLabelExpression="Waiting a moment"/>
+
+
     <emailStep  name="email user results"
                 emailAddressesExpression="=T(java.util.Arrays).asList('gwohlford@levelsbeyond.com', 'gabrielwohlford@gmail.com')"
-                subjectExpression="Reach Engine workflow example">
+                subjectExpression="Reach Engine workflow example"
+                attachmentsExpression="${resultsURL}"
+                nextStep="end">
         <body>
             <![CDATA[
-                ${fileResults}
+                'Orphaned' or 'No Department' files with issues
             ]]>
         </body>
     </emailStep>
@@ -101,15 +117,18 @@
 
     <!--customIngestDirectory(params) -->
     <contextDataDef name="directoryToIngest" dataType="Directory"	 userInput="true"       label="1: Directory To Ingest"  required="true"/>
-    <contextDataDef name="createMezz"        dataType="Boolean"      defaultDataExpression="true"/>
-    <contextDataDef name="createProxy"       dataType="Boolean"      defaultDataExpression="true"/>
-    <contextDataDef name="createThumb"       dataType="Boolean"      defaultDataExpression="true"/>
-    <contextDataDef name="createThumbVideo"  dataType="Boolean"      defaultDataExpression="true"/>
+<!--    <contextDataDef name="createMezz"        dataType="Boolean"      defaultDataExpression="true"/>-->
+<!--    <contextDataDef name="createProxy"       dataType="Boolean"      defaultDataExpression="true"/>-->
+<!--    <contextDataDef name="createThumb"       dataType="Boolean"      defaultDataExpression="true"/>-->
+<!--    <contextDataDef name="createThumbVideo"  dataType="Boolean"      defaultDataExpression="true"/>-->
     <contextDataDef name="jsonKeyMap"        dataType="JSON"/>
     <!--end Params-->
 
-    <contextDataDef name="issueExist"        dataType="Boolean"      defaultDataExpression="false"/>
+    <contextDataDef name="issueExist"        dataType="Boolean"/>
     <contextDataDef name="fileResults"       dataType="String"/>
+
+    <contextDataDef name="resultsURL"        dataType="String"       defaultDataExpression="/reachengine/media/tmpResults.txt"/>
+    <contextDataDef name="issueDescription"  dataType="String"       defaultDataExpression="${#formatDate('DD/MM/YYY', #newDate())} -- Practice Project"/>
 
 
 

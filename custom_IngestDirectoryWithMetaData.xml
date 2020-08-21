@@ -195,6 +195,8 @@
         <subflowContextDataMapping parentDataDef="imageThumbArguments"      subflowDataDef="imageThumbArguments"/>
         <subflowContextDataMapping parentDataDef="documentProxyArguments"   subflowDataDef="documentProxyArguments"/>
         <subflowContextDataMapping parentDataDef="documentThumbArguments"   subflowDataDef="documentThumbArguments"/>
+
+        <subflowContextDataMapping parentDataDef="issueExist" subflowDataDef="issueExist"/>
     </executeSubflowStep>
 
 
@@ -319,6 +321,9 @@
 
     <!--Here lies the custom variables -->
     <contextDataDef name="jsonMap"                  dataType="JSON"/>
+    <contextDataDef name="issueExist"               dataType="Boolean"/>
+
+
 
 
 </workflow>

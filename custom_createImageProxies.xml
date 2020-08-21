@@ -321,7 +321,7 @@
     <contextDataDef name="createThumb" 			dataType="Boolean"	    defaultDataExpression="${#sysconfig('workflows.default.proxies.image.createThumb') ?: true}"/>
     <!-- ImageMagick args -->
     <contextDataDef name="thumbArguments"       dataType="String"       defaultDataExpression="${#sysconfig('workflows.default.proxies.image.thumbArguments') ?: (#sysconfig('imageAsset.thumbArguments') ?: '-flatten -strip -resize 96x72')}"/>
-    <contextDataDef name="proxyArguments"       dataType="String"       defaultDataExpression="${#sysconfig('workflows.default.proxies.image.proxyArguments') ?: (#sysconfig('imageAsset.proxyArguments') ?: '-flatten -strip -resize 600x450')}"/>
+    <contextDataDef name="proxyArguments"       dataType="String"       defaultDataExpression="${'-flatten -strip -resize 600x450 -rotate 90>'}"/>
     <contextDataDef name="prioritiesJson"       dataType="JSON">
         <description>
             A JSON with the structure:

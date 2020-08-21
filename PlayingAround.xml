@@ -21,18 +21,53 @@
           id="PlayingAround"
           name="Playing Around"
           executionLabelExpression="Playing Around"
-          subjectDOClassName="AssetMaster"
+          subjectDOClassName=""
           showInUserInterface="true"
           sdkVersion="">
 
-    <initialStepName>check for duplicates</initialStepName>
+    <initialStepName>get results from file</initialStepName>
+
+    <groovyStep name="handle results"
+                resultDataDef="txtOut"
+                nextStep="get results from file">
+        <script>
+            <![CDATA[
+
+            import java.io.File
+            import java.text.SimpleDateFormat
+            import com.routeto1.filesystem.FileWrapperUtils
+
+            File file = new File(txtOut.getAbsolutePath())
+            //check if a new file should be created or append to old
+            if (!appendToFile){
+                //replace|new file
+                file.write(messageToWrite)
+            }
+            else{
+                //append to existing file
+                file.append("\n" + messageToWrite)
+            }
+            return txtOut
+            ]]>
+        </script>
+    </groovyStep>
+
+    <groovyStep name="get results from file"
+                resultDataDef="fileResults"
+                nextStep="send e-mail">
+        <script>
+            <![CDATA[
+            return new File('/reachengine/media/tmpResults.txt').text
+            ]]>
+        </script>
+    </groovyStep>
 
 
     <queryStep name="check for duplicates"
                targetDataObjectClass="AssetMaster"
                resultDataDef="duplicateResults"
                executionLabelExpression="test ${json.uuid} found ${duplicateResults.size()}"
-               nextStep="end">
+               nextStep="send e-mail">
 
         <criteria>
             <![CDATA[
@@ -68,13 +103,13 @@
 
     <emailStep  name="send e-mail"
                     emailAddressesExpression="=T(java.util.Arrays).asList('gwohlford@levelsbeyond.com', 'gabrielwohlford@gmail.com')"
-                    subjectExpression="Reach Engine workflow example">
-        <body>
-            <![CDATA[
-                bah
-            ]]>
-        </body>
+                    subjectExpression="Reach Engine workflow example"
+                    attachmentsExpression="/reachengine/media/tmpResults.txt"
+                    nextStep="end">
+        <body>Results from run</body>
     </emailStep>
+
+
 
     <!-- tinker area -->
 <!--    <noopStep name="get workflow name" executionLabelExpression="${#this.workflow.executionLabel}" nextStep="end"/>-->
@@ -128,6 +163,13 @@
     <contextDataDef name="duplicateResults"   dataType="Data Object" multiple="true"/>
     <nimbus:setMetadataValueStep name="testset" targetExpression="${subject}" propertyNameExpression="proxyTriage" valueExpression="${true}" nextStep="end"/>
 
+
+    <!--F = handle results -->
+    <contextDataDef name="appendToFile"     dataType="Boolean"  defaultDataExpression="false"/>
+    <contextDataDef name="messageToWrite"   dataType="String"   defaultDataExpression="yes,no, maybe so?"/>
+    <contextDataDef name="workflowName"     dataType="String"   defaultDataExpression=""/>
+    <contextDataDef name="txtOut"           dataType="File"     defaultDataExpression="/reachengine/media/tmpResults.txt"/>
+    <contextDataDef name="fileResults"      dataType="String"/>
 
 
 

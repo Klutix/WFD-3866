@@ -41,7 +41,7 @@
                     def jsonSlurper = new JsonSlurper()
                     def object = jsonSlurper.parseText(jsonMetadata.toString())
 
-                    return object["category"] != null ? object["category"] : 'No Department'
+                    return !object["category"].equals('Null') ? object["category"] : 'No Department'
             ]]>
         </script>
 

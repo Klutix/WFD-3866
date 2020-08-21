@@ -20,16 +20,57 @@
           xsi:schemaLocation="http://levelsbeyond.com/schema/latest http://levelsbeyond.com/schema/latest/studio.xsd"
           id="createAddToResultsFile"
           name="CreateAddToResultsFile"
-          executionLabelExpression="Is this workingz"
+          executionLabelExpression="Add to Results"
           subjectDOClassName=""
           showInUserInterface="true"
           sdkVersion=""
           description="This workflow can is meant for creating and updating a results file and a specified location">
 
-    <initialStepName>handle results</initialStepName>
+    <initialStepName>workflow is running</initialStepName>
+
+    <queryStep name="check if workflow is running"
+               targetDataObjectClass="WorkflowExecution"
+               resultDataDef="currentExecutions"
+               executionLabelExpression="Is a workflow running on this file already? ${currentExecutions.size() != 0}"
+               pctComplete="5"
+    >
+        <transition condition="${currentExecutions.size() == 0}">
+            <targetStepName>handle results</targetStepName>
+        </transition>
+        <transition condition="true">
+            <targetStepName>workflow is running</targetStepName>
+        </transition>
+
+        <criteria>
+            <![CDATA[
+                <criteria>
+                    <and>
+                        <condition property="workflowVersion.workflow.key" op="eq">
+                            <test value="${ #this.workflow.workflowVersion.workflow.key }" />
+                        </condition>
+                        <condition property="uuid" op="noteq">
+                            <test value="${ #this.workflow.uuid }" />
+                        </condition>
+                        <condition property="executionLabel" op="like">
+							<test value="Add to Results" />
+						</condition>
+                        <condition property="status" op="in">
+                            <tests>
+                                <test value="CREATED" />
+                                <test value="QUEUED" />
+                                <test value="EXECUTING" />
+                            </tests>
+                        </condition>
+                    </and>
+                </criteria>
+            ]]>
+        </criteria>
+    </queryStep>
+
     <groovyStep name="handle results"
                 resultDataDef="txtOut"
-                nextStep="end">
+                nextStep="end"
+                executionLabelExpression="writing results to ${resultsURl}">
         <script>
             <![CDATA[
 
@@ -41,12 +82,11 @@
                     //check if a new file should be created or append to old
                     if (!appendToFile){
                         //replace|new file
-                        file.write(workflowName)
-                        file.write("\n" + message)
+                        file.write("\n" + messageToWrite)
                     }
                     else{
                         //append to existing file
-                        file.append("\n" + message)
+                        file.append("\n" + messageToWrite)
                     }
                     return txtOut
             ]]>
@@ -57,13 +97,15 @@
     <noopStep name="end"/>
     <!-- ................................................... Data Defs .................................................... -->
     <!-- ............ INPUT ............. -->
-    <contextDataDef name="appendToFile"     dataType="Boolean"  defaultDataExpression="false"/>
+    <contextDataDef name="appendToFile"     dataType="Boolean"   defaultDataExpression="false"/>
     <contextDataDef name="messageToWrite"   dataType="String"/>
-    <contextDataDef name="workflowName"     dataType="String"   defaultDataExpression="A Workflow"/>
+    <contextDataDef name="workflowName"     dataType="String"    defaultDataExpression="A Workflow"/>
     <!-- ................................ -->
-    <contextDataDef name="txtOut"           dataType="File"     defaultDataExpression="/reachengine/media/tmpResults.txt"/>
+    <contextDataDef name="resultsURl"       dataType="String"    defaultDataExpression="/reachengine/media/tmpResults.txt/"   required="true"/>
+    <contextDataDef name="txtOut"           dataType="File"      defaultDataExpression="${resultsURl}"/>
 
 
+    <contextDataDef name="currentExecutions" 	    dataType="Data Object" 	    multiple="true"/>
 
 
 
