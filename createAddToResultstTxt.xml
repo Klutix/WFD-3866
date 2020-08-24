@@ -73,7 +73,6 @@
                 executionLabelExpression="writing results to ${resultsURl}">
         <script>
             <![CDATA[
-
                     import java.io.File
                     import java.text.SimpleDateFormat
                     import com.routeto1.filesystem.FileWrapperUtils

@@ -70,23 +70,6 @@
 
     <setContextData name="set asset name" targetDataDef="assetName" valueExpression="${fileToIngest.name}" nextStep="extract associated metadata from map"/>
 
-    <!-- Extract JSON for Specified File -->
-<!--    <executeSubflowStep name="extract associated metadata from map"-->
-<!--                        targetWorkflowId="ExtractMetaDataFromCsvMap"-->
-<!--                        executionLabelExpression="Extracting metadata for ${fileToIngest.name}"-->
-<!--                        resultDataDef="jsonMetadata">-->
-<!--        <subflowContextDataMapping parentDataDef="assetName" subflowDataDef="fileName"/>-->
-<!--        <subflowContextDataMapping parentDataDef="jsonMap" subflowDataDef="jsonMap"/>-->
-
-<!--        <transition condition="${jsonMetadata.size() == 0 }">-->
-<!--            <targetStepName>end</targetStepName>-->
-<!--        </transition>-->
-<!--        <transition condition="${true}">-->
-<!--            <targetStepName>check for duplicates</targetStepName>-->
-<!--        </transition>-->
-
-<!--    </executeSubflowStep>-->
-
     <setContextData name="extract associated metadata from map"
                     targetDataDef="jsonMetadata"
                     valueExpression="${jsonMap.get(assetName)}">
@@ -139,34 +122,15 @@
         <subflowContextDataMapping parentDataDef="versionDuplicate"         subflowDataDef="versionDuplicate"/>
     </executeSubflowStep>
 
-
     <setContextData name="extract category name from metadata"
                     targetDataDef="categoryName"
                     nextStep="extract collection name from metadata"
-                    valueExpression="${jsonMetadata.category == 'Null' ? jsonMetadata.category : 'No Department'}"/>
+                    valueExpression="${jsonMetadata.category.equals('Null') ? jsonMetadata.category : 'No Department'}"/>
 
     <setContextData name="extract collection name from metadata"
                     targetDataDef="collectionName"
                     nextStep="add collection to asset"
-                    valueExpression="${jsonMetadata.collection == 'Null' ? jsonMetadata.collection : 'orphaned'}"/>
-
-
-<!--    &lt;!&ndash; Extract category name from metadata &ndash;&gt;-->
-<!--    <executeSubflowStep name="extract category name from metadata"-->
-<!--                        targetWorkflowId="ExtractCatgeoryNameFromJson"-->
-<!--                        resultDataDef="categoryName"-->
-<!--                        nextStep="extract collection name from metadata">-->
-<!--        <subflowContextDataMapping parentDataDef="jsonMetadata" subflowDataDef="jsonMetadata"/>-->
-<!--    </executeSubflowStep>-->
-
-<!--    &lt;!&ndash; Extract collection name from metadata &ndash;&gt;-->
-<!--    <executeSubflowStep name="extract collection name from metadata"-->
-<!--                        targetWorkflowId="ExtractCollectionNameFromJson"-->
-<!--                        resultDataDef="collectionName"-->
-<!--                        nextStep="add collection to asset">-->
-<!--        <subflowContextDataMapping parentDataDef="jsonMetadata" subflowDataDef="jsonMetadata"/>-->
-<!--    </executeSubflowStep>-->
-
+                    valueExpression="${jsonMetadata.collection.equals('Null') ? jsonMetadata.collection : 'orphaned'}"/>
 
     <!-- add collection to reach -->
     <executeSubflowStep name="add collection to asset" targetWorkflowId="createCollectionAddToAsset"
@@ -174,14 +138,6 @@
                         nextStep="add category to asset">
         <subflowContextDataMapping parentDataDef="collectionName" subflowDataDef="collectionName"/>
     </executeSubflowStep>
-
-    <!--    &lt;!&ndash;add category to asset &ndash;&gt;-->
-    <!--    <executeSubflowStep name="add category to asset" targetWorkflowId="createCategoryAddToAsset"-->
-    <!--                        subjectChangePath="${assetMaster}"-->
-    <!--                        nextStep="set metadata">-->
-    <!--        <subflowContextDataMapping parentDataDef="categoryName" subflowDataDef="categoryName"/>-->
-    <!--    </executeSubflowStep>-->
-
 
     <nimbus:changeMetaCategoryStep
             name="add category to asset"
@@ -209,11 +165,11 @@
 
     <!-- ####################################testing##################################### -->
     <noopStep name="check for orphaned or no department values">
-        <transition condition="${categoryName == 'No Department' or collectionName == 'Null'}">
+        <transition condition="${categoryName.equals('No Department') or collectionName.equals('Null')}">
             <targetStepName>set issue message</targetStepName>
         </transition>
         <transition condition="${true}">
-            <targetStepName>end</targetStepName>
+            <targetStepName>create proxies</targetStepName>
         </transition>
     </noopStep>
 
@@ -277,7 +233,6 @@
                       executionLabelExpression="Workflow already executing on the file"
                       reasonExpression="Workflow already executing on the file"
     />
-
 
     <!-- ............................................... Context Data Defs ................................................ -->
     <!-- ....... User Input Variables ........ -->

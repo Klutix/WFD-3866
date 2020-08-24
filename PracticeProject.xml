@@ -44,17 +44,25 @@
 
     <executeSubflowStep name="custom_DirectoryWithMetaData"
                         targetWorkflowId="custom_IngestDirectoryWithMetaData"
-                        nextStep="do issues exist">
+                        nextStep="email user finished workflow">
         <subflowContextDataMapping parentDataDef="directoryToIngest" subflowDataDef="directoryToIngest"/>
-<!--        <subflowContextDataMapping parentDataDef="createMezz"        subflowDataDef="createMezz"/>-->
-<!--        <subflowContextDataMapping parentDataDef="createProxy"       subflowDataDef="createProxy"/>-->
-<!--        <subflowContextDataMapping parentDataDef="createThumb"       subflowDataDef="createThumb"/>-->
-<!--        <subflowContextDataMapping parentDataDef="createThumbVideo"  subflowDataDef="createThumbVideo"/>-->
         <subflowContextDataMapping parentDataDef="jsonKeyMap"        subflowDataDef="jsonMap"/>
     </executeSubflowStep>
 
-    <!-- _______________________________testing_______________________ -->
-    <!-- TODO: IF ANY ASSET FAILS EMAIL USER -->
+
+
+
+    <emailStep  name="email user finished workflow"
+                emailAddressesExpression="=T(java.util.Arrays).asList('gwohlford@levelsbeyond.com')"
+                subjectExpression="Workflow Finished"
+                nextStep="do issues exist">
+        <body>
+            <![CDATA[
+                 -- Practice Project Finished Running--
+            ]]>
+        </body>
+    </emailStep>
+
     <groovyStep name="do issues exist"
                 resultDataDef="issueExist">
         <transition condition="${issueExist}">
@@ -66,33 +74,18 @@
 
         <script>
             <![CDATA[
-                def fileData = new File(resultsURL).text
-                if(fileData.equals(issueDescription))
-                    return false
-                return true
+            def fileData = new File(resultsURL).text
+            if(fileData.equals(issueDescription))
+                return false
+            return true
             ]]>
         </script>
     </groovyStep>
 
 
-<!--    <noopStep name="do issues exist">-->
-<!--        <transition condition="${issueExist}">-->
-<!--            <targetStepName>email user results</targetStepName>-->
-<!--        </transition>-->
-<!--        <transition condition="{true}">-->
-<!--            <targetStepName>end</targetStepName>-->
-<!--        </transition>-->
-<!--    </noopStep>-->
-
-    <delayStep name="wait a moment"
-               nextStep="email user results"
-               delaySecondsExpression="10"
-               executionLabelExpression="Waiting a moment"/>
-
-
     <emailStep  name="email user results"
                 emailAddressesExpression="=T(java.util.Arrays).asList('gwohlford@levelsbeyond.com', 'gabrielwohlford@gmail.com')"
-                subjectExpression="Reach Engine workflow example"
+                subjectExpression="Files flagged with issues during ingest"
                 attachmentsExpression="${resultsURL}"
                 nextStep="end">
         <body>
@@ -101,6 +94,8 @@
             ]]>
         </body>
     </emailStep>
+
+
     <!-- ____________________________end testing__________________________ -->
 
     <!-- ................................................... End Steps .................................................... -->
